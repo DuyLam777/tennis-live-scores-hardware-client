@@ -1,5 +1,5 @@
 #include <SoftwareSerial.h>
-SoftwareSerial BTSerial(2, 3); // RX, TX
+SoftwareSerial BTSerial(2, 3);  // RX, TX
 
 const int hallAnalogPin = A0;
 int hallAnalog;
@@ -14,14 +14,14 @@ void setup() {
 
 void loop() {
   if (BTSerial.available()) {
-  hallAnalog = analogRead(hallAnalogPin);
-  Serial.print("Analog: ");
-  Serial.println(hallAnalog);
+    hallAnalog = analogRead(hallAnalogPin);
+    Serial.print("Analog: ");
+    Serial.println(hallAnalog);
 
-  if((hallAnalog>550) || (hallAnalog<500)) {
-    Serial.print("Magnet nearby!!");
-    BTSerial.write("Magnet nearby!!");
-    delay(500);
-  }
+    if ((hallAnalog > 550) || (hallAnalog < 500)) {
+      Serial.print("Magnet nearby!!");
+      BTSerial.write("Magnet nearby!!");
+      delay(500);
+    }
   }
 }
