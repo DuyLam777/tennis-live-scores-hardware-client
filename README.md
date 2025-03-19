@@ -1,93 +1,206 @@
-# Hardware client
+# Tennis Live Scores - Hardware Client Documentation
 
+## 1. Introduction
 
+The Tennis Live Scores Hardware Client is a crucial component of a live scoring system designed to address the frustration experienced by players waiting for their matches during tennis tournaments. This documentation provides comprehensive information about the hardware client, which captures score data from mechanical scoreboards using sensors and transmits it wirelessly to the mobile application.
 
-## Getting started
+## 2. System Overview
 
-To make it easy for you to get started with GitLab, here's a list of recommended next steps.
+The hardware client is one of three components in the Tennis Live Scores system:
 
-Already a pro? Just edit this README.md and make it your own. Want to make it easy? [Use the template at the bottom](#editing-this-readme)!
+1. **Hardware Client (this component)**: Detects and transmits scoreboard data
+2. **Mobile Application**: Connects to the hardware client and/or allows manual score entry
+3. **Web Application**: Displays live scores and provides tournament management
 
-## Add your files
+The hardware client attaches to existing mechanical scoreboards found on tennis courts and wirelessly transmits score changes to the system.
 
-- [ ] [Create](https://docs.gitlab.com/ee/user/project/repository/web_editor.html#create-a-file) or [upload](https://docs.gitlab.com/ee/user/project/repository/web_editor.html#upload-a-file) files
-- [ ] [Add files using the command line](https://docs.gitlab.com/ee/gitlab-basics/add-file.html#add-a-file-using-the-command-line) or push an existing Git repository with the following command:
+## 3. Hardware Components
 
+### 3.1 Component List
+
+| Component | Quantity | Purpose |
+|-----------|----------|---------|
+| Arduino Mega2560 | 1 | Main microcontroller |
+| Hall Effect Analog Sensors | 14 | Score detection (7 per side) |
+| HM-10 Bluetooth LE Module | 1 | Wireless communication |
+| Battery (see Section 6) | 1 | Power source |
+
+## 4. Installation and Setup
+
+### 4.1 Hardware Assembly
+
+1. **Sensor Positioning**:
+   - Mount 7 Hall effect sensors for Player A's score (set counter and 6 game counters)
+   - Mount 7 Hall effect sensors for Player B's score (set counter and 6 game counters)
+   - Sensor placement must align with the magnetic elements in the mechanical scoreboard
+   - Secure sensors with non-conductive adhesive or mounting brackets
+
+2. **Arduino and Bluetooth Module**:
+   - Mount the Arduino Mega2560 in the weather-resistant enclosure
+   - Connect the HM-10 Bluetooth module to TX1/RX1 pins (18/19)
+   - Secure all components to prevent movement during operation
+
+3. **Power Connection**:
+   - Connect the selected battery (see Section 6) to the Arduino power input
+   - Ensure proper polarity and voltage regulation
+
+### 4.2 Software Setup
+
+1. Download the Arduino IDE from [arduino.cc](https://www.arduino.cc/en/software)
+2. Install the required libraries:
+   - SoftwareSerial (included with Arduino IDE)
+3. Load the provided code to the Arduino:
+
+4. Upload the code to the Arduino Mega2560 using the Arduino IDE
+
+## 5. Technical Implementation
+
+### 5.1 Sensor Configuration
+
+The hardware client uses Hall effect sensors to detect the position of magnetic elements in the mechanical scoreboard. Each sensor is configured to detect a specific score value:
+
+- **Set Counter**: Indicates which player has won a set (1 sensor per player)
+- **Game Counters**: Indicates the games won in the current set (6 sensors per player)
+
+The sensors are connected to digital input pins on the Arduino Mega2560 with internal pull-up resistors enabled. When a magnet is detected (indicating a score), the pin reads LOW.
+
+### 5.2 Bluetooth Connection
+
+The HM-10 Bluetooth Low Energy module provides wireless communication with the mobile application. The module connects to the Arduino's hardware serial port (TX1/RX1) and operates at 9600 baud rate.
+
+#### 5.2.1 Bluetooth Technical Specifications
+
+- **Protocol**: Bluetooth Low Energy (BLE) 4.0
+- **Module**: HM-10
+- **Operating Voltage**: 3.3V
+- **Operating Current**: ~8.5mA (connected)
+- **Transmission Power**: -23dBm to 3dBm
+- **Range**: Approximately 10m in typical conditions
+
+#### 5.2.2 GATT Service Specification
+
+The hardware client implements a custom GATT service for transmitting score data:
+
+| Service | UUID |
+|---------|------|
+| Tennis Score Service | 0000FFE0-0000-1000-8000-00805F9B34FB |
+
+| Characteristic | UUID | Properties | Description |
+|----------------|------|------------|-------------|
+| Score Data | 0000FFE1-0000-1000-8000-00805F9B34FB | Read, Notify | Current score data |
+| Battery Level | 0000FFE2-0000-1000-8000-00805F9B34FB | Read, Notify | Battery percentage |
+
+### 5.3 Data Structure
+
+The score data is transmitted as a comma-separated string with the following format:
+
+```text
+Set,<SetA><SetB>,Games,<Game1A><Game1B>,<Game2A><Game2B>,<Game3A><Game3B>,<Game4A><Game4B>,<Game5A><Game5B>,<Game6A><Game6B>
 ```
-cd existing_repo
-git remote add origin https://gitlab.com/kdg-ti/the-lab/teams-24-25/linux-goons-tennis-live-scores/hardware-client.git
-git branch -M main
-git push -uf origin main
+
+Where:
+
+- `<SetA>` and `<SetB>` are either 0 or 1 (LOW or HIGH) representing the set counter state
+- `<GameNA>` and `<GameNB>` are either 0 or 1 (LOW or HIGH) representing the game counter state
+
+Example:
+
+```text
+Set,10,Games,01,11,00,10,00,00
 ```
 
-## Integrate with your tools
+This represents:
 
-- [ ] [Set up project integrations](https://gitlab.com/kdg-ti/the-lab/teams-24-25/linux-goons-tennis-live-scores/hardware-client/-/settings/integrations)
+- Player A has won a set (1)
+- Player B has not won a set (0)
+- Game counters show: A=0,B=1; A=1,B=1; A=0,B=0; A=1,B=0; A=0,B=0; A=0,B=0
 
-## Collaborate with your team
+## 6. Power Consumption & Battery
 
-- [ ] [Invite team members and collaborators](https://docs.gitlab.com/ee/user/project/members/)
-- [ ] [Create a new merge request](https://docs.gitlab.com/ee/user/project/merge_requests/creating_merge_requests.html)
-- [ ] [Automatically close issues from merge requests](https://docs.gitlab.com/ee/user/project/issues/managing_issues.html#closing-issues-automatically)
-- [ ] [Enable merge request approvals](https://docs.gitlab.com/ee/user/project/merge_requests/approvals/)
-- [ ] [Set auto-merge](https://docs.gitlab.com/ee/user/project/merge_requests/merge_when_pipeline_succeeds.html)
+### 6.1 Power Consumption Analysis
 
-## Test and Deploy
+Based on detailed measurements, the hardware client consumes approximately 0.286 watt-hours (Wh) per hour of operation.
 
-Use the built-in continuous integration in GitLab.
+| Component | Power Consumption (Wh) |
+|-----------|------------------------|
+| Arduino Mega2560 | 0.125 |
+| Hall Effect Sensors (14) | 0.160 |
+| HM-10 Bluetooth Module | 0.001 |
+| **Total System** | **0.286** |
 
-- [ ] [Get started with GitLab CI/CD](https://docs.gitlab.com/ee/ci/quick_start/index.html)
-- [ ] [Analyze your code for known vulnerabilities with Static Application Security Testing (SAST)](https://docs.gitlab.com/ee/user/application_security/sast/)
-- [ ] [Deploy to Kubernetes, Amazon EC2, or Amazon ECS using Auto Deploy](https://docs.gitlab.com/ee/topics/autodevops/requirements.html)
-- [ ] [Use pull-based deployments for improved Kubernetes management](https://docs.gitlab.com/ee/user/clusters/agent/)
-- [ ] [Set up protected environments](https://docs.gitlab.com/ee/ci/environments/protected_environments.html)
+### 6.2 Battery Options
 
-***
+#### 6.2.1 One-Week Operation (~48 Wh)
 
-# Editing this README
+**Rechargeable Options:**
 
-When you're ready to make this README your own, just edit this file and use the handy template below (or feel free to structure it however you want - this is just a starting point!). Thanks to [makeareadme.com](https://www.makeareadme.com/) for this template.
+- 10,000mAh Lithium Polymer battery at 3.7V (37Wh)
+- 12,000mAh LiPo battery at 3.7V (44.4Wh)
+- 4 × 18650 Lithium-ion cells in a 2S2P configuration (29.6Wh)
 
-## Suggestions for a good README
+**Disposable Battery Options:**
 
-Every project is different, so consider which of these sections apply to yours. The sections used in the template are suggestions for most open source projects. Also keep in mind that while a README can be too long and detailed, too long is better than too short. If you think your README is too long, consider utilizing another form of documentation rather than cutting out information.
+- 6 × D cell alkaline batteries in a 3S2P configuration (54-81Wh)
+- 12 × AA alkaline batteries in a 4S3P configuration (36-54Wh)
 
-## Name
-Choose a self-explaining name for your project.
+#### 6.2.2 One-Month Operation (~206 Wh)
 
-## Description
-Let people know what your project can do specifically. Provide context and add a link to any reference visitors might be unfamiliar with. A list of Features or a Background subsection can also be added here. If there are alternatives to your project, this is a good place to list differentiating factors.
+**Rechargeable Options:**
 
-## Badges
-On some READMEs, you may see small images that convey metadata, such as whether or not all the tests are passing for the project. You can use Shields to add some to your README. Many services also have instructions for adding a badge.
+- 12V, 15Ah SLA (Sealed Lead Acid) battery (180Wh)
+- 12 × 18650 Li-ion battery pack in a 4S3P configuration (177.6Wh)
+- 40,000mAh power bank at 3.7V (148Wh)
 
-## Visuals
-Depending on what you are making, it can be a good idea to include screenshots or even a video (you'll frequently see GIFs rather than actual videos). Tools like ttygif can help, but check out Asciinema for a more sophisticated method.
+**Disposable Battery Option:**
 
-## Installation
-Within a particular ecosystem, there may be a common way of installing things, such as using Yarn, NuGet, or Homebrew. However, consider the possibility that whoever is reading your README is a novice and would like more guidance. Listing specific steps helps remove ambiguity and gets people to using your project as quickly as possible. If it only runs in a specific context like a particular programming language version or operating system or has dependencies that have to be installed manually, also add a Requirements subsection.
+- 8 × D cell alkaline batteries in a 4S2P configuration (144-216Wh)
 
-## Usage
-Use examples liberally, and show the expected output if you can. It's helpful to have inline the smallest example of usage that you can demonstrate, while providing links to more sophisticated examples if they are too long to reasonably include in the README.
+## 7. Testing and Troubleshooting
 
-## Support
-Tell people where they can go to for help. It can be any combination of an issue tracker, a chat room, an email address, etc.
+### 7.1 Sensor Validation
 
-## Roadmap
-If you have ideas for releases in the future, it is a good idea to list them in the README.
+To verify proper sensor placement and operation:
 
-## Contributing
-State if you are open to contributions and what your requirements are for accepting them.
+1. **Serial Monitor Debug:**
+   - Connect the Arduino to a computer via USB
+   - Open Serial Monitor in Arduino IDE (9600 baud)
+   - Observe the output as you change scoreboard values
+   - Verify each sensor responds correctly
 
-For people who want to make changes to your project, it's helpful to have some documentation on how to get started. Perhaps there is a script that they should run or some environment variables that they need to set. Make these steps explicit. These instructions could also be useful to your future self.
+2. **LED Indicators:**
+   - The code can be modified to use onboard LEDs for visual feedback
+   - LED on = sensor detecting magnet
+   - LED off = no magnetic field detected
 
-You can also document commands to lint the code or run tests. These steps help to ensure high code quality and reduce the likelihood that the changes inadvertently break something. Having instructions for running tests is especially helpful if it requires external setup, such as starting a Selenium server for testing in a browser.
+### 7.2 Common Issues and Solutions
 
-## Authors and acknowledgment
-Show your appreciation to those who have contributed to the project.
+| Issue | Possible Cause | Solution |
+|-------|---------------|----------|
+| No Bluetooth connection | Power issue, incorrect pairing | Check battery, reset module, re-pair with mobile app |
+| Inaccurate score reading | Sensor misalignment, interference | Adjust sensor position, check for nearby magnets |
+| Intermittent connection | Bluetooth interference | Change location, reduce obstacles between devices |
+| System unresponsive | Software crash, power issue | Reset system, check battery levels |
 
-## License
-For open source projects, say how it is licensed.
+## 8. Future Improvements
 
-## Project status
-If you have run out of energy or time for your project, put a note at the top of the README saying that development has slowed down or stopped completely. Someone may choose to fork your project or volunteer to step in as a maintainer or owner, allowing your project to keep going. You can also make an explicit request for maintainers.
+### 8.1 Power Optimization
+
+- Implement deep sleep mode for Arduino between readings
+- Use power-efficient sensors
+- Optimize Bluetooth transmission frequency
+
+### 8.2 Enhanced Features
+
+- Add ambient light sensor for auto-brightness of optional display
+- Implement accelerometer for tamper detection
+- Develop machine learning for optical recognition of non-magnetic scoreboards
+
+### 8.3 Integration Opportunities
+
+- Direct communication with tournament management software
+- Weather station integration for play condition monitoring
+- Court occupancy tracking for facility management
+
+## 9. License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
